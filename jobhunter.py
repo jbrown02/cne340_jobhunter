@@ -8,6 +8,7 @@ import json
 import requests
 from datetime import date
 import html2text
+from plyer import notification
 
 # Connect to the database
 def connect_to_sql():
@@ -28,6 +29,9 @@ def query_sql(cursor, query):
     cursor.execute(query)
     return cursor
 
+with open('config.json') as config_file: # (SOURCE: https://www.loekvandenouweland.com/content/using-json-config-files-in-python.html)
+    data = json.load(config_file)
+
 # Add a new job
 def add_new_job(cursor, jobdetails):
     # extract all required columns
@@ -46,15 +50,10 @@ def check_if_job_exists(cursor, jobdetails):
     cursor.execute(query, (title,))
     return cursor.fetchall()
 
-'''    query = "UPDATE"
-    title = jobdetails['title']
-    cursor.execute(query, (title))
-    return query_sql(cursor, query)'''
-
 # Deletes job
 def delete_job(cursor, jobdetails):
     ## Add your code here
-    query = "DELETE * FROM jobs WHERE Title=%s"
+    query = "DELETE * FROM jobs WHERE Title=%s AND date < DATEADD(day, -14, GETDATE())" # (SOURCE: https://stackoverflow.com/questions/4364913/delete-rows-with-date-older-than-30-days-with-sql-server-query)
     title = jobdetails['title']
     cursor.execute(query, (title))
     return query_sql(cursor, query)
@@ -82,9 +81,12 @@ def add_or_delete_job(jobpage, cursor):
         is_job_found = len(
         cursor.fetchall()) > 0  # https://stackoverflow.com/questions/2511679/python-number-of-rows-affected-by-cursor-executeselect
         if is_job_found:
-            return True
-        else:
             pass
+        else:
+            notification.notify(
+                title=jobdetails['title'],
+                message="A new job has been posted.", # (SOURCE: https://www.geeksforgeeks.org/python-desktop-notifier-using-plyer-module/)
+)
             # INSERT JOB
             # Add in your code here to notify the user of a new posting. This code will notify the new user
 
@@ -99,7 +101,7 @@ def main():
 
     while (1):  # Infinite Loops. Only way to kill it is to crash or manually crash it. We did this as a background process/passive scraper
         jobhunt(cursor)
-        time.sleep(21600)  # Sleep for 1h, this is run every hour because API or web interfaces have request limits. Your request will get blocked.
+        time.sleep(14400)  # Sleep for 1h, this is run every hour because API or web interfaces have request limits. Your request will get blocked.
 
 # Sleep does a rough cycle count, system is not entirely accurate
 # If you want to test if script works change time.sleep() to 10 seconds and delete your table in MySQL
