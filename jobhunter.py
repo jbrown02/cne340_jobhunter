@@ -51,14 +51,13 @@ def check_if_job_exists(cursor, jobdetails):
     cursor.execute(query, (title,))
     return cursor
 
-def delete_job(cursor, jobdetails):
-    title = jobdetails['title']
-    query = "DELETE FROM jobs WHERE publication_date < DATE_SUB(NOW(), INTERVAL 14 DAY) AND title = \"%s\"" % title # (SOURCE: https://stackoverflow.com/questions/4364913/delete-rows-with-date-older-than-30-days-with-sql-server-query)
-    cursor.execute(query, (title,))
+def delete_job(cursor):
+    query = "DELETE FROM jobs WHERE publication_date < CURRENT_DATE() - INTERVAL 14 DAY" # (SOURCE: https://stackoverflow.com/questions/4364913/delete-rows-with-date-older-than-30-days-with-sql-server-query)
+    cursor.execute(query)
     return query_sql(cursor, query)
 
 def fetch_new_jobs():
-    query = requests.get("https://remotive.io/api/remote-jobs")
+    query = requests.get("https://remotive.com/api/remote-jobs")
     datas = json.loads(query.text)
     return datas
 
@@ -72,8 +71,7 @@ def add_or_delete_job(jobpage, cursor):
         check_if_job_exists(cursor, jobdetails)
         is_job_found = len(cursor.fetchall()) > 0  # https://stackoverflow.com/questions/2511679/python-number-of-rows-affected-by-cursor-executeselect
         if is_job_found:
-            print("Job is found: "+ jobdetails["title"] + " from " + jobdetails["company_name"])
-            print(jobdetails["tags"])
+            delete_job(cursor)
         else:
             print("New job is found: " + jobdetails["title"] + " from " + jobdetails["company_name"])
             add_new_job(jobdetails)
